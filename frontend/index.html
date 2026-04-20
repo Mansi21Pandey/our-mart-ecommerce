@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Mart - Complete E-Commerce Website</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="#home">Our Mart</a>
+            </div>
+            <ul class="nav-menu" id="nav-menu">
+                <li><a href="#home" class="nav-link active">Home</a></li>
+                <li><a href="#products" class="nav-link">Products</a></li>
+                <li><a href="#orders" class="nav-link">My Orders</a></li>
+                <li><a href="#contact" class="nav-link">Contact</a></li>
+            </ul>
+            <div class="nav-icons">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Search products...">
+                    <button onclick="searchFunction()">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <div class="cart-icon" onclick="toggleCart()">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-count" id="cart-count">0</span>
+                </div>
+                <div class="user-icon" id="userIcon" onclick="toggleAuthModal()">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="menu-toggle" onclick="toggleMenu()">
+                    <i class="fas fa-bars"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Auth Modal (Sign Up/Login) -->
+    <div class="auth-modal" id="authModal">
+        <div class="auth-content">
+            <span class="close" onclick="toggleAuthModal()">&times;</span>
+            <div class="auth-tabs">
+                <button class="tab-btn active" onclick="switchTab('login')">Login</button>
+                <button class="tab-btn" onclick="switchTab('signup')">Sign Up</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form active">
+                <h2>Login</h2>
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="auth-btn">Login</button>
+            </form>
+
+            <!-- Sign Up Form -->
+            <form id="signupForm" class="auth-form">
+                <h2>Sign Up</h2>
+                <div class="form-group">
+                    <label for="signupName">Full Name</label>
+                    <input type="text" id="signupName" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupEmail">Email</label>
+                    <input type="email" id="signupEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupPassword">Password</label>
+                    <input type="password" id="signupPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" required>
+                </div>
+                <button type="submit" class="auth-btn">Sign Up</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Shopping Cart Sidebar -->
+    <div class="cart-sidebar" id="cartSidebar">
+        <div class="cart-header">
+            <h3>Your Cart</h3>
+            <span class="close-cart" onclick="toggleCart()">&times;</span>
+        </div>
+        <div class="cart-items" id="cartItems">
+            <!-- Cart items will be dynamically added here -->
+        </div>
+        <div class="cart-footer">
+            <div class="cart-total">
+                <span>Total:</span>
+                <span id="cartTotal">₹0.00</span>
+            </div>
+            <button class="checkout-btn" onclick="checkout()">Proceed to Checkout</button>
+        </div>
+    </div>
+
+    <!-- Address Modal for Order -->
+    <div class="address-modal" id="addressModal">
+        <div class="address-content">
+            <div class="address-header">
+                <h3>Complete Your Order</h3>
+                <span class="close-address" onclick="closeAddressModal()">&times;</span>
+            </div>
+            <form id="addressForm" class="address-form">
+                <div class="form-group">
+                    <label for="fullName">Full Name *</label>
+                    <input type="text" id="fullName" required placeholder="Enter your full name">
+                </div>
+                <div class="form-group">
+                    <label for="mobileNumber">Mobile Number *</label>
+                    <input type="tel" id="mobileNumber" required placeholder="10-digit mobile number" pattern="[0-9]{10}">
+                </div>
+                <div class="form-group">
+                    <label for="addressLine1">Address Line 1 *</label>
+                    <input type="text" id="addressLine1" required placeholder="House/Flat no., Building name">
+                </div>
+                <div class="form-group">
+                    <label for="addressLine2">Address Line 2 (Optional)</label>
+                    <input type="text" id="addressLine2" placeholder="Street, Area, Landmark">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="city">City *</label>
+                        <input type="text" id="city" required placeholder="City">
+                    </div>
+                    <div class="form-group">
+                        <label for="state">State *</label>
+                        <input type="text" id="state" required placeholder="State">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="pincode">Pincode *</label>
+                        <input type="text" id="pincode" required placeholder="6-digit pincode" pattern="[0-9]{6}">
+                    </div>
+                    <div class="form-group">
+                        <label for="country">Country *</label>
+                        <input type="text" id="country" required value="India" placeholder="Country">
+                    </div>
+                </div>
+                <div class="order-summary">
+                    <h4>Order Summary</h4>
+                    <div class="summary-items" id="summaryItems"></div>
+                    <div class="summary-total">
+                        <span>Total Amount:</span>
+                        <span id="summaryTotal">₹0.00</span>
+                    </div>
+                </div>
+                <button type="submit" class="place-order-btn">Place Order</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Home Section -->
+        <section id="home" class="section active-section">
+            <div class="hero">
+                <div class="hero-content">
+                    <h1>Welcome to Our Mart</h1>
+                    <p>Finding your products in affordable price!!</p>
+                    <a href="#products" class="cta-btn">Shop Now</a>
+                </div>
+            </div>
+
+            <!-- Featured Categories -->
+            <div class="categories">
+                <h2>Select your product's category</h2>
+                <div class="category-grid">
+                    <div class="category-card" data-cat="electronics">
+                        <i class="fa-solid fa-tv"></i>
+                        <h3>Electronics</h3>
+                    </div>
+                    <div class="category-card" data-cat="fashion">
+                        <i class="fa-solid fa-shirt"></i>
+                        <h3>Fashion</h3>
+                    </div>
+                    <div class="category-card" data-cat="footwear">
+                        <i class="fa-solid fa-shoe-prints"></i>
+                        <h3>Footwear</h3>
+                    </div>
+                    <div class="category-card" data-cat="beauty">
+                        <i class="fa-solid fa-face-smile"></i>
+                        <h3>Beauty</h3>
+                    </div>
+                    <div class="category-card" data-cat="bags">
+                        <i class="fa fa-shopping-bag"></i>
+                        <h3>Bags</h3>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Products Section -->
+        <section id="products" class="section">
+            <h2>Our Products</h2>
+            <div class="products-grid" id="productsGrid">
+                <!-- Products will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- My Orders Section -->
+        <section id="orders" class="section">
+            <h2>My Orders</h2>
+            <div class="orders-container" id="ordersContainer">
+                <!-- Orders will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="section">
+            <h2>Contact Us</h2>
+            <div class="contact-container">
+                <div class="contact-info">
+                    <div class="info-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <div>
+                            <h3>Address</h3>
+                            <p>Gargi Bhawan Lucknow, 226020</p>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-phone"></i>
+                        <div>
+                            <h3>Phone</h3>
+                            <p>+91 9876543210</p>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-envelope"></i>
+                        <div>
+                            <h3>Email</h3>
+                            <p>
+                                mansipandey217@gmail.com
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <form class="contact-form" id="contactForm">
+                    <div class="form-group">
+                        <input type="text" id="contactName" placeholder="Your Name" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="email" id="contactEmail" placeholder="Your Email" required>
+                    </div>
+                    <div class="form-group">
+                        <textarea id="contactMessage" placeholder="Your Message" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="submit-btn">Send Message</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Our Mart</h3>
+                <p>Your one and only shop, shop for everything</p>
+            </div>
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="#home" class="nav-link">Home</a></li>
+                    <li><a href="#products" class="nav-link">Products</a></li>
+                    <li><a href="#orders" class="nav-link">My Orders</a></li>
+                    <li><a href="#contact" class="nav-link">Contact</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Follow Us</h3>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="mailto:mansipandey217@gmail.com"><i class="fab fa-google"></i></a>
+                    <a href="https://www.instagram.com/our_mart_means_family_mart/" target="_blank"><i class="fab fa-instagram"></i></a>
+                    <a href="https://www.linkedin.com/in/mansi-pandey-982a4b394/" target="_blank"><i class="fab fa-linkedin"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Our Mart. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
