@@ -3,13 +3,14 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Our Mart - Complete E-Commerce Website</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
+
     <!-- Navigation Bar -->
     <nav class="navbar">
         <div class="nav-container">
@@ -25,9 +26,7 @@
             <div class="nav-icons">
                 <div class="search-box">
                     <input type="text" id="search-input" placeholder="Search products...">
-                    <button onclick="searchFunction()">
-                        <i class="fas fa-search"></i>
-                    </button>
+                    <i class="fas fa-search" onclick="filterProducts()"></i>
                 </div>
                 <div class="cart-icon" onclick="toggleCart()">
                     <i class="fas fa-shopping-cart"></i>
@@ -96,15 +95,13 @@
             <h3>Your Cart</h3>
             <span class="close-cart" onclick="toggleCart()">&times;</span>
         </div>
-        <div class="cart-items" id="cartItems">
-            <!-- Cart items will be dynamically added here -->
-        </div>
+        <div class="cart-items" id="cartItems"></div>
         <div class="cart-footer">
             <div class="cart-total">
                 <span>Total:</span>
                 <span id="cartTotal">₹0.00</span>
             </div>
-            <button class="checkout-btn" onclick="checkout()">Proceed to Checkout</button>
+            <button class="checkout-btn" onclick="proceedToCheckout()">Proceed to Checkout</button>
         </div>
     </div>
 
@@ -115,53 +112,57 @@
                 <h3>Complete Your Order</h3>
                 <span class="close-address" onclick="closeAddressModal()">&times;</span>
             </div>
-            <form id="addressForm" class="address-form">
+            <form id="addressForm">
                 <div class="form-group">
-                    <label for="fullName">Full Name *</label>
-                    <input type="text" id="fullName" required placeholder="Enter your full name">
+                    <input type="text" id="fullName" placeholder="Full Name *" required>
                 </div>
                 <div class="form-group">
-                    <label for="mobileNumber">Mobile Number *</label>
-                    <input type="tel" id="mobileNumber" required placeholder="10-digit mobile number" pattern="[0-9]{10}">
+                    <input type="tel" id="mobileNumber" placeholder="Mobile Number *" required>
                 </div>
                 <div class="form-group">
-                    <label for="addressLine1">Address Line 1 *</label>
-                    <input type="text" id="addressLine1" required placeholder="House/Flat no., Building name">
+                    <input type="text" id="addressLine1" placeholder="Address Line 1 *" required>
                 </div>
                 <div class="form-group">
-                    <label for="addressLine2">Address Line 2 (Optional)</label>
-                    <input type="text" id="addressLine2" placeholder="Street, Area, Landmark">
+                    <input type="text" id="addressLine2" placeholder="Address Line 2 (Optional)">
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="city">City *</label>
-                        <input type="text" id="city" required placeholder="City">
+                        <input type="text" id="city" placeholder="City *" required>
                     </div>
                     <div class="form-group">
-                        <label for="state">State *</label>
-                        <input type="text" id="state" required placeholder="State">
+                        <input type="text" id="state" placeholder="State *" required>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="pincode">Pincode *</label>
-                        <input type="text" id="pincode" required placeholder="6-digit pincode" pattern="[0-9]{6}">
+                        <input type="text" id="pincode" placeholder="Pincode *" required>
                     </div>
                     <div class="form-group">
-                        <label for="country">Country *</label>
-                        <input type="text" id="country" required value="India" placeholder="Country">
+                        <input type="text" id="country" value="India" placeholder="Country">
                     </div>
                 </div>
-                <div class="order-summary">
-                    <h4>Order Summary</h4>
-                    <div class="summary-items" id="summaryItems"></div>
-                    <div class="summary-total">
-                        <span>Total Amount:</span>
-                        <span id="summaryTotal">₹0.00</span>
-                    </div>
+                <div class="order-summary" id="orderSummaryPreview"></div>
+                <div class="delivery-info" id="deliveryInfoPreview">
+                    <!-- Delivery info will show here -->
                 </div>
-                <button type="submit" class="place-order-btn">Place Order</button>
+                <button type="submit" class="place-order-btn">Continue to Payment</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div class="payment-modal" id="paymentModal">
+        <div class="payment-content">
+            <span class="close" onclick="closePaymentModal()">&times;</span>
+            <h2>Choose Payment Method</h2>
+            <div class="payment-options">
+                <button class="payment-btn online" id="payOnlineBtn">
+                <i class="fab fa-google-pay"></i> Pay Online (UPI/Card/NetBanking)
+            </button>
+                <button class="payment-btn cod" id="payCodBtn">
+                <i class="fas fa-money-bill-wave"></i> Cash on Delivery
+            </button>
+            </div>
         </div>
     </div>
 
@@ -180,45 +181,20 @@
             <!-- Featured Categories -->
             <div class="categories">
                 <h2>Select your product's category</h2>
-                <div class="category-grid">
-                    <div class="category-card" data-cat="electronics">
-                        <i class="fa-solid fa-tv"></i>
-                        <h3>Electronics</h3>
-                    </div>
-                    <div class="category-card" data-cat="fashion">
-                        <i class="fa-solid fa-shirt"></i>
-                        <h3>Fashion</h3>
-                    </div>
-                    <div class="category-card" data-cat="footwear">
-                        <i class="fa-solid fa-shoe-prints"></i>
-                        <h3>Footwear</h3>
-                    </div>
-                    <div class="category-card" data-cat="beauty">
-                        <i class="fa-solid fa-face-smile"></i>
-                        <h3>Beauty</h3>
-                    </div>
-                    <div class="category-card" data-cat="bags">
-                        <i class="fa fa-shopping-bag"></i>
-                        <h3>Bags</h3>
-                    </div>
-                </div>
+                <div class="category-grid" id="categoryGrid"></div>
             </div>
         </section>
 
         <!-- Products Section -->
         <section id="products" class="section">
             <h2>Our Products</h2>
-            <div class="products-grid" id="productsGrid">
-                <!-- Products will be dynamically added here -->
-            </div>
+            <div class="products-grid" id="productsGrid"></div>
         </section>
 
         <!-- My Orders Section -->
         <section id="orders" class="section">
             <h2>My Orders</h2>
-            <div class="orders-container" id="ordersContainer">
-                <!-- Orders will be dynamically added here -->
-            </div>
+            <div class="orders-container" id="ordersContainer"></div>
         </section>
 
         <!-- Contact Section -->
@@ -244,9 +220,7 @@
                         <i class="fas fa-envelope"></i>
                         <div>
                             <h3>Email</h3>
-                            <p>
-                                mansipandey217@gmail.com
-                            </p>
+                            <p>support@ourmart.com</p>
                         </div>
                     </div>
                 </div>
@@ -285,7 +259,7 @@
             <div class="footer-section">
                 <h3>Follow Us</h3>
                 <div class="social-links">
-                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="https://www.facebook.com/share/1CUz5Drz7e/"><i class="fab fa-facebook"></i></a>
                     <a href="mailto:mansipandey217@gmail.com"><i class="fab fa-google"></i></a>
                     <a href="https://www.instagram.com/our_mart_means_family_mart/" target="_blank"><i class="fab fa-instagram"></i></a>
                     <a href="https://www.linkedin.com/in/mansi-pandey-982a4b394/" target="_blank"><i class="fab fa-linkedin"></i></a>
