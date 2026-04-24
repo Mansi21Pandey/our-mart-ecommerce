@@ -29,6 +29,23 @@ const products = [
     { id: 27, name: "Ladies Purse", price: 2000, category: "bags", image: "/images/purse.jpeg", rating: 4.8 },
     { id: 28, name: "Wallet", price: 1000, category: "bags", image: "/images/wallet.jpeg", rating: 4.0 }
 ];
+app.get('/api/products', (req, res) => {
+    res.json({ success: true, products: products });
+});
+
+// API route for login
+app.post('/api/auth/login', (req, res) => {
+    const { email, password } = req.body;
+    // Check if user exists (you can use a simple array for now)
+    if (email === 'test@example.com' && password === '123456') {
+        res.json({ success: true, token: 'dummy-token-123' });
+    } else {
+        res.json({ success: false, message: 'Invalid credentials' });
+    }
+});
+
+// Serve static images
+app.use('/images', express.static('images'));
 
 // Category Icons Mapping
 const categoryIcons = {
