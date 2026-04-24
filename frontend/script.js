@@ -29,32 +29,6 @@ const products = [
     { id: 27, name: "Ladies Purse", price: 2000, category: "bags", image: "/images/purse.jpeg", rating: 4.8 },
     { id: 28, name: "Wallet", price: 1000, category: "bags", image: "/images/wallet.jpeg", rating: 4.0 }
 ];
-app.get('/api/products', (req, res) => {
-    res.json({ success: true, products: products });
-});
-
-// API route for login
-app.post('/api/auth/login', (req, res) => {
-    const { email, password } = req.body;
-    // Check if user exists (you can use a simple array for now)
-    if (email === 'test@example.com' && password === '123456') {
-        res.json({ success: true, token: 'dummy-token-123' });
-    } else {
-        res.json({ success: false, message: 'Invalid credentials' });
-    }
-});
-
-// Serve static images
-app.use('/images', express.static('images'));
-
-// Category Icons Mapping
-const categoryIcons = {
-    electronics: '<i class="fas fa-microchip"></i>',
-    fashion: '<i class="fas fa-tshirt"></i>',
-    footwear: '<i class="fas fa-shoe-prints"></i>',
-    beauty: '<i class="fas fa-smile"></i>',
-    bags: '<i class="fas fa-briefcase"></i>'
-};
 
 // ========== DELIVERY DATE FUNCTION ==========
 function calculateDeliveryDate() {
@@ -182,7 +156,8 @@ function updateAuthUI() {
 }
 
 function toggleAuthModal() {
-    document.getElementById('authModal').classList.toggle('show');
+    const modal = document.getElementById('authModal');
+    if (modal) modal.classList.toggle('show');
 }
 
 function switchTab(tab) {
@@ -222,25 +197,29 @@ function removeFromCart(productId) {
 
 function updateCartCount() {
     const total = cart.reduce((sum, item) => sum + item.quantity, 0);
-    document.getElementById('cart-count').innerText = total;
+    const cartCount = document.getElementById('cart-count');
+    if (cartCount) cartCount.innerText = total;
 }
 
 function toggleCart() {
-    document.getElementById('cartSidebar').classList.toggle('open');
+    const sidebar = document.getElementById('cartSidebar');
+    if (sidebar) sidebar.classList.toggle('open');
     loadCartItems();
 }
 
 function loadCartItems() {
     const container = document.getElementById('cartItems');
     const totalSpan = document.getElementById('cartTotal');
+    if (!container) return;
+
     if (!currentUser) {
         container.innerHTML = '<p style="text-align:center;">Login to see cart</p>';
-        totalSpan.innerText = '₹0';
+        if (totalSpan) totalSpan.innerText = '₹0';
         return;
     }
     if (cart.length === 0) {
         container.innerHTML = '<p style="text-align:center;">Your cart is empty</p>';
-        totalSpan.innerText = '₹0';
+        if (totalSpan) totalSpan.innerText = '₹0';
         return;
     }
     let total = 0;
@@ -259,7 +238,7 @@ function loadCartItems() {
             </div>
         `;
     }).join('');
-    totalSpan.innerText = `₹${total.toFixed(2)}`;
+    if (totalSpan) totalSpan.innerText = `₹${total.toFixed(2)}`;
 }
 
 // ========== CHECKOUT & PAYMENT ==========
@@ -278,51 +257,63 @@ function proceedToCheckout() {
     }
     updateOrderSummaryPreview();
     updateDeliveryInfo();
-    document.getElementById('addressModal').classList.add('show');
+    const addressModal = document.getElementById('addressModal');
+    if (addressModal) addressModal.classList.add('show');
 }
 
 function updateOrderSummaryPreview() {
     let total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    document.getElementById('orderSummaryPreview').innerHTML = `
-        <div style="background:#f0f0f0;padding:10px;border-radius:8px;">
-            <strong>Order Summary</strong><br>
-            ${cart.map(item => `${item.name} x${item.quantity}: ₹${(item.price * item.quantity).toFixed(2)}`).join('<br>')}
-            <hr>
-            <strong>Total: ₹${total.toFixed(2)}</strong>
-        </div>
-    `;
+    const summaryDiv = document.getElementById('orderSummaryPreview');
+    if (summaryDiv) {
+        summaryDiv.innerHTML = `
+            <div style="background:#f0f0f0;padding:10px;border-radius:8px;">
+                <strong>Order Summary</strong><br>
+                ${cart.map(item => `${item.name} x${item.quantity}: ₹${(item.price * item.quantity).toFixed(2)}`).join('<br>')}
+                <hr>
+                <strong>Total: ₹${total.toFixed(2)}</strong>
+            </div>
+        `;
+    }
 }
 
 function closeAddressModal() {
-    document.getElementById('addressModal').classList.remove('show');
-    document.getElementById('addressForm').reset();
+    const modal = document.getElementById('addressModal');
+    if (modal) modal.classList.remove('show');
+    const form = document.getElementById('addressForm');
+    if (form) form.reset();
 }
 
 function closePaymentModal() {
-    document.getElementById('paymentModal').classList.remove('show');
+    const modal = document.getElementById('paymentModal');
+    if (modal) modal.classList.remove('show');
 }
 
-document.getElementById('addressForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const address = {
-        fullName: document.getElementById('fullName').value,
-        mobile: document.getElementById('mobileNumber').value,
-        line1: document.getElementById('addressLine1').value,
-        line2: document.getElementById('addressLine2').value,
-        city: document.getElementById('city').value,
-        state: document.getElementById('state').value,
-        pincode: document.getElementById('pincode').value,
-        country: document.getElementById('country').value
-    };
-    if (!address.fullName || !address.mobile || !address.line1 || !address.city || !address.state || !address.pincode) {
-        showNotification("Please fill all required fields!", "error");
-        return;
-    }
-    pendingAddress = address;
-    pendingDeliveryInfo = calculateDeliveryDate();
-    closeAddressModal();
-    document.getElementById('paymentModal').classList.add('show');
-});
+// Address form submit handler
+const addressForm = document.getElementById('addressForm');
+if (addressForm) {
+    addressForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const address = {
+            fullName: document.getElementById('fullName').value,
+            mobile: document.getElementById('mobileNumber').value,
+            line1: document.getElementById('addressLine1').value,
+            line2: document.getElementById('addressLine2').value,
+            city: document.getElementById('city').value,
+            state: document.getElementById('state').value,
+            pincode: document.getElementById('pincode').value,
+            country: document.getElementById('country').value
+        };
+        if (!address.fullName || !address.mobile || !address.line1 || !address.city || !address.state || !address.pincode) {
+            showNotification("Please fill all required fields!", "error");
+            return;
+        }
+        pendingAddress = address;
+        pendingDeliveryInfo = calculateDeliveryDate();
+        closeAddressModal();
+        const paymentModal = document.getElementById('paymentModal');
+        if (paymentModal) paymentModal.classList.add('show');
+    });
+}
 
 function placeOrder(paymentMethod, transactionId = null) {
     const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -355,32 +346,38 @@ function placeOrder(paymentMethod, transactionId = null) {
     showSection('orders');
 }
 
-document.getElementById('payOnlineBtn').onclick = () => {
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    if (confirm(`Proceed to pay ₹${total} via Online Payment?\n(Click OK to simulate successful payment)`)) {
-        const dummyTransaction = "TXN_" + Math.random().toString(36).substr(2, 8).toUpperCase();
-        placeOrder('Online', dummyTransaction);
-    }
-};
+// Payment buttons
+const payOnlineBtn = document.getElementById('payOnlineBtn');
+if (payOnlineBtn) {
+    payOnlineBtn.onclick = () => {
+        const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        if (confirm(`Proceed to pay ₹${total} via Online Payment?\n(Click OK to simulate successful payment)`)) {
+            const dummyTransaction = "TXN_" + Math.random().toString(36).substr(2, 8).toUpperCase();
+            placeOrder('Online', dummyTransaction);
+        }
+    };
+}
 
-document.getElementById('payCodBtn').onclick = () => {
-    placeOrder('Cash on Delivery');
-};
+const payCodBtn = document.getElementById('payCodBtn');
+if (payCodBtn) {
+    payCodBtn.onclick = () => {
+        placeOrder('Cash on Delivery');
+    };
+}
 
-// ========== FIXED PRODUCTS & CATEGORIES FUNCTIONS ==========
+// ========== PRODUCTS & CATEGORIES FUNCTIONS ==========
 function loadProducts() {
     const grid = document.getElementById('productsGrid');
     if (!grid) return;
     
     grid.innerHTML = products.map(product => `
         <div class="product-card">
-            <img src="${product.image}" class="product-image" alt="${product.name}">
+            <img src="${product.image}" class="product-image" alt="${product.name}" onerror="this.src='https://via.placeholder.com/200x200?text=No+Image'">
             <div class="product-info">
                 <h3 class="product-title">${product.name}</h3>
-                <div class="product-price">₹${product.price.toFixed(2)}</div>
-                <button class="add-to-cart" onclick="addToCart(${product.id})">
-                    Add to Cart
-                </button>
+                <div class="product-price">₹${product.price.toLocaleString()}</div>
+                <div class="product-rating">⭐ ${product.rating}</div>
+                <button class="add-to-cart" onclick="addToCart(${product.id})">Add to Cart</button>
             </div>
         </div>
     `).join('');
@@ -389,10 +386,8 @@ function loadProducts() {
 function filterProducts() {
     const searchTerm = document.getElementById('search-input').value.toLowerCase();
     
-    // Pehle decide karo ki kaunse products dikhane hain
     let productsToShow = [];
     
-    // Agar search term hai to search karo, warna saare products
     if (searchTerm === '') {
         productsToShow = products;
     } else {
@@ -400,6 +395,7 @@ function filterProducts() {
     }
     
     const grid = document.getElementById('productsGrid');
+    if (!grid) return;
     grid.innerHTML = '';
     
     if (productsToShow.length === 0) {
@@ -412,10 +408,11 @@ function filterProducts() {
         const card = document.createElement('div');
         card.className = 'product-card';
         card.innerHTML = `
-            <img src="${p.image}" class="product-image" alt="${p.name}">
+            <img src="${p.image}" class="product-image" alt="${p.name}" onerror="this.src='https://via.placeholder.com/200x200?text=No+Image'">
             <div class="product-info">
                 <h3 class="product-title">${p.name}</h3>
-                <div class="product-price">₹${p.price}</div>
+                <div class="product-price">₹${p.price.toLocaleString()}</div>
+                <div class="product-rating">⭐ ${p.rating}</div>
                 <button class="add-to-cart" onclick="addToCart(${p.id})">Add to Cart</button>
             </div>
         `;
@@ -423,13 +420,18 @@ function filterProducts() {
     }
 }
 
-// FIXED: Category filter function - This will work correctly now
-// ========== CATEGORY FILTER FUNCTION ==========
 function filterByCategory(category) {
+    console.log("Filtering by category:", category);  // Debugging
+    
     // Filter products by category
     const filteredProducts = products.filter(p => p.category === category);
     
     const productsGrid = document.getElementById('productsGrid');
+    if (!productsGrid) {
+        console.error("productsGrid not found!");
+        return;
+    }
+    
     productsGrid.innerHTML = '';
     
     if (filteredProducts.length === 0) {
@@ -442,18 +444,20 @@ function filterByCategory(category) {
         const card = document.createElement('div');
         card.className = 'product-card';
         card.innerHTML = `
-            <img src="${p.image}" class="product-image" alt="${p.name}">
+            <img src="${p.image}" class="product-image" alt="${p.name}" onerror="this.src='https://via.placeholder.com/200x200?text=No+Image'">
             <div class="product-info">
                 <h3 class="product-title">${p.name}</h3>
-                <div class="product-price">₹${p.price}</div>
+                <div class="product-price">₹${p.price.toLocaleString()}</div>
+                <div class="product-rating">⭐ ${p.rating}</div>
                 <button class="add-to-cart" onclick="addToCart(${p.id})">Add to Cart</button>
             </div>
         `;
         productsGrid.appendChild(card);
     }
     
-    // Search box clear karo taaki conflict na ho
-    document.getElementById('search-input').value = '';
+    // Search box clear karo
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) searchInput.value = '';
     
     // Products section dikhao
     showSection('products');
@@ -462,6 +466,10 @@ function filterByCategory(category) {
 function loadCategories() {
     const categories = ['electronics', 'fashion', 'footwear', 'beauty', 'bags'];
     const grid = document.getElementById('categoryGrid');
+    if (!grid) {
+        console.error("categoryGrid element not found!");
+        return;
+    }
     
     const categoryNames = {
         electronics: 'Electronics',
@@ -485,14 +493,24 @@ function loadCategories() {
         const cat = categories[i];
         const card = document.createElement('div');
         card.className = 'category-card';
-        card.innerHTML = `<i class="fas ${getIconClass(cat)}" style="color: ${categoryColors[cat]}; font-size: 2.5rem;"></i><h3>${categoryNames[cat]}</h3>`;
-        card.onclick = function() {
-            filterByCategory(cat);
-        };
+        card.style.cursor = 'pointer';
+        card.innerHTML = `
+            <i class="fas ${getIconClass(cat)}" style="color: ${categoryColors[cat]}; font-size: 2.5rem;"></i>
+            <h3>${categoryNames[cat]}</h3>
+        `;
+        
+        // Important: onclick event set karo
+        card.onclick = (function(category) {
+            return function() {
+                console.log("Clicked category:", category);
+                filterByCategory(category);
+            };
+        })(cat);
+        
         grid.appendChild(card);
     }
-
-
+    
+    console.log("Categories loaded:", categories.length);
 }
 
 function getIconClass(category) {
@@ -505,6 +523,7 @@ function getIconClass(category) {
     };
     return icons[category];
 }
+
 // ========== ORDERS WITH DELIVERY DATE ==========
 function loadOrders() {
     const container = document.getElementById('ordersContainer');

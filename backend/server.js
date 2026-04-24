@@ -272,13 +272,8 @@ app.post('/api/contact/submit', (req, res) => {
     res.json({ success: true, message: 'Message sent successfully' });
 });
 
-// ============ DEFAULT ROUTE ============
-app.get('/', (req, res) => {
-    res.json({ message: 'E-commerce API is running! Visit /api/products for products' });
-});
-
-// Default route - serves index.html from frontend folder
-// ============ DEFAULT ROUTE ============
+// ============ DEFAULT ROUTE (FIXED) ============
+// This single route serves your main website HTML file
 app.get('/', (req, res) => {
     // Check if frontend exists and serve it
     const indexPath = path.join(__dirname, '..', 'frontend', 'index.html');
@@ -293,8 +288,8 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`\n🚀 Server running on port ${PORT}`);
-    console.log(`📦 API URL: https://your-app.onrender.com/api`);
-    console.log(`🖼️  Images URL: https://your-app.onrender.com/images/lenovo.jpeg`);
+    console.log(`📦 API URL: https://our-mart-ecommerce-5.onrender.com/api`);
+    console.log(`🖼️  Images URL: https://our-mart-ecommerce-5.onrender.com/images/lenovo.jpeg`);
     console.log(`\n✅ Test User: test@example.com / 123456`);
     console.log(`✨ Ready to accept requests!\n`);
 });
