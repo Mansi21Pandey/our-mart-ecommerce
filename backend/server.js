@@ -341,10 +341,3 @@ app.listen(PORT, () => {
     console.log(`\n Test User: test@example.com / 123456`);
     console.log(` Ready to accept requests!\n`);
 });
-
-// Make sure this is at the bottom of server.js
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`API URL: http://localhost:${PORT}/api`);
-});
