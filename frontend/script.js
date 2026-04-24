@@ -1,4 +1,13 @@
-// ========== PRODUCT DATA ==========
+// ============ API CONFIGURATION - WORKS EVERYWHERE ============
+// Automatically detects if running locally or on Render
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ?
+    'http://localhost:5000/api' // Local development
+    :
+    '/api'; // Render deployment
+
+console.log('API_URL:', API_URL); // This will help debug
+
+// ============ PRODUCT DATA ============
 const products = [
     { id: 1, name: "Lenovo Laptop", price: 86990, category: "electronics", image: "/images/lenovo.jpeg", rating: 4.8 },
     { id: 2, name: "HP Laptop", price: 75490, category: "electronics", image: "/images/hp.jpeg", rating: 4.5 },
@@ -30,7 +39,29 @@ const products = [
     { id: 28, name: "Wallet", price: 1000, category: "bags", image: "/images/wallet.jpeg", rating: 4.0 }
 ];
 
-// ========== DELIVERY DATE FUNCTION ==========
+// ============ API HELPER FUNCTION ==========
+async function apiCall(endpoint, method = 'GET', body = null) {
+    const token = localStorage.getItem('token');
+    const headers = {
+        'Content-Type': 'application/json',
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const options = {
+        method,
+        headers,
+    };
+    if (body) {
+        options.body = JSON.stringify(body);
+    }
+
+    const response = await fetch(`${API_URL}${endpoint}`, options);
+    return await response.json();
+}
+
+// ============ DELIVERY DATE FUNCTION ==========
 function calculateDeliveryDate() {
     const today = new Date();
     let deliveryDate = new Date(today);
@@ -68,72 +99,80 @@ function updateDeliveryInfo() {
     }
 }
 
-// ========== LOCAL STORAGE ==========
-let cart = JSON.parse(localStorage.getItem('cart')) || [];
-let orders = JSON.parse(localStorage.getItem('orders')) || [];
-let users = JSON.parse(localStorage.getItem('users')) || [];
+// ============ AUTHENTICATION ==========
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
 
-function saveData() {
-    localStorage.setItem('cart', JSON.stringify(cart));
-    localStorage.setItem('orders', JSON.stringify(orders));
-    localStorage.setItem('users', JSON.stringify(users));
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-    updateCartCount();
-}
-
-// ========== AUTHENTICATION ==========
-function handleLogin(e) {
+async function handleLogin(e) {
     e.preventDefault();
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
-    const user = users.find(u => u.email === email && u.password === password);
-    if (user) {
-        currentUser = user;
-        saveData();
-        updateAuthUI();
-        toggleAuthModal();
-        showNotification(`Welcome back ${user.name}!`);
-        loadCartItems();
-        loadOrders();
-    } else {
-        showNotification("Invalid email or password!", "error");
+
+    try {
+        const data = await apiCall('/auth/login', 'POST', { email, password });
+
+        if (data.success) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('currentUser', JSON.stringify(data.user));
+            currentUser = data.user;
+            updateAuthUI();
+            toggleAuthModal();
+            showNotification(`Welcome back ${data.user.name}!`);
+            await loadCartItems();
+            await loadOrders();
+        } else {
+            showNotification(data.message || "Invalid email or password!", "error");
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        showNotification("Login failed! Server error.", "error");
     }
 }
 
-function handleSignup(e) {
+async function handleSignup(e) {
     e.preventDefault();
     const name = document.getElementById('signupName').value;
     const email = document.getElementById('signupEmail').value;
     const password = document.getElementById('signupPassword').value;
     const confirm = document.getElementById('confirmPassword').value;
+
     if (password !== confirm) {
         showNotification("Passwords do not match!", "error");
         return;
     }
-    if (users.find(u => u.email === email)) {
-        showNotification("Email already exists!", "error");
-        return;
+
+    try {
+        console.log('Sending signup request to:', `${API_URL}/auth/signup`);
+        const data = await apiCall('/auth/signup', 'POST', { name, email, password });
+
+        console.log('Signup response:', data);
+
+        if (data.success) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('currentUser', JSON.stringify(data.user));
+            currentUser = data.user;
+            updateAuthUI();
+            toggleAuthModal();
+            showNotification("Account created successfully!");
+            await loadCartItems();
+            await loadOrders();
+        } else {
+            showNotification(data.message || "Signup failed!", "error");
+        }
+    } catch (error) {
+        console.error('Signup error:', error);
+        showNotification("Signup failed! Server error. Check console.", "error");
     }
-    const newUser = { id: Date.now(), name, email, password };
-    users.push(newUser);
-    currentUser = newUser;
-    saveData();
-    updateAuthUI();
-    toggleAuthModal();
-    showNotification("Account created successfully!");
-    loadCartItems();
-    loadOrders();
 }
 
 function logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('currentUser');
     currentUser = null;
-    cart = [];
-    orders = [];
-    saveData();
     updateAuthUI();
-    loadCartItems();
-    loadOrders();
+    document.getElementById('cartItems').innerHTML = '';
+    document.getElementById('cartTotal').innerText = '₹0';
+    document.getElementById('cart-count').innerText = '0';
+    document.getElementById('ordersContainer').innerHTML = '<p style="text-align:center;">Please login to view your orders</p>';
     showNotification("Logged out successfully!");
 }
 
@@ -169,45 +208,55 @@ function switchTab(tab) {
     }
 }
 
-// ========== CART FUNCTIONS ==========
-function addToCart(productId) {
+// ============ CART FUNCTIONS ==========
+async function addToCart(productId) {
     if (!currentUser) {
         showNotification("Please login first!", "error");
         toggleAuthModal();
         return;
     }
-    const product = products.find(p => p.id === productId);
-    const existingItem = cart.find(item => item.id === productId);
-    if (existingItem) {
-        existingItem.quantity++;
-    } else {
-        cart.push({...product, quantity: 1 });
+
+    try {
+        const data = await apiCall('/cart/add', 'POST', { productId, quantity: 1 });
+        if (data.success) {
+            const product = products.find(p => p.id === productId);
+            showNotification(`${product.name} added to cart!`);
+            await loadCartItems();
+        } else {
+            showNotification(data.message || "Failed to add to cart!", "error");
+        }
+    } catch (error) {
+        console.error('Add to cart error:', error);
+        showNotification("Error adding to cart!", "error");
     }
-    saveData();
-    loadCartItems();
-    showNotification(`${product.name} added to cart!`);
 }
 
-function removeFromCart(productId) {
-    cart = cart.filter(item => item.id !== productId);
-    saveData();
-    loadCartItems();
-    showNotification("Item removed from cart");
+async function removeFromCart(productId) {
+    if (!currentUser) return;
+
+    try {
+        const data = await apiCall(`/cart/${productId}`, 'DELETE');
+        if (data.success) {
+            showNotification("Item removed from cart");
+            await loadCartItems();
+        }
+    } catch (error) {
+        console.error('Remove from cart error:', error);
+        showNotification("Error removing from cart!", "error");
+    }
 }
 
 function updateCartCount() {
-    const total = cart.reduce((sum, item) => sum + item.quantity, 0);
-    const cartCount = document.getElementById('cart-count');
-    if (cartCount) cartCount.innerText = total;
+    // Updated in loadCartItems
 }
 
-function toggleCart() {
+async function toggleCart() {
     const sidebar = document.getElementById('cartSidebar');
     if (sidebar) sidebar.classList.toggle('open');
-    loadCartItems();
+    await loadCartItems();
 }
 
-function loadCartItems() {
+async function loadCartItems() {
     const container = document.getElementById('cartItems');
     const totalSpan = document.getElementById('cartTotal');
     if (!container) return;
@@ -215,43 +264,60 @@ function loadCartItems() {
     if (!currentUser) {
         container.innerHTML = '<p style="text-align:center;">Login to see cart</p>';
         if (totalSpan) totalSpan.innerText = '₹0';
+        document.getElementById('cart-count').innerText = '0';
         return;
     }
-    if (cart.length === 0) {
-        container.innerHTML = '<p style="text-align:center;">Your cart is empty</p>';
-        if (totalSpan) totalSpan.innerText = '₹0';
-        return;
+
+    try {
+        const data = await apiCall('/cart', 'GET');
+        const cart = data.cart || [];
+
+        if (cart.length === 0) {
+            container.innerHTML = '<p style="text-align:center;">Your cart is empty</p>';
+            if (totalSpan) totalSpan.innerText = '₹0';
+            document.getElementById('cart-count').innerText = '0';
+            return;
+        }
+
+        let total = 0;
+        container.innerHTML = cart.map(item => {
+            total += item.price * item.quantity;
+            return `
+                <div class="cart-item">
+                    <img src="${item.image}" alt="${item.name}">
+                    <div class="cart-item-details">
+                        <div class="cart-item-title">${item.name}</div>
+                        <div class="cart-item-price">₹${item.price} x ${item.quantity}</div>
+                    </div>
+                    <div class="cart-item-remove" onclick="removeFromCart(${item.id})">
+                        <i class="fas fa-trash"></i>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        if (totalSpan) totalSpan.innerText = `₹${total.toFixed(2)}`;
+        document.getElementById('cart-count').innerText = cart.reduce((sum, item) => sum + item.quantity, 0);
+    } catch (error) {
+        console.error('Load cart error:', error);
     }
-    let total = 0;
-    container.innerHTML = cart.map(item => {
-        total += item.price * item.quantity;
-        return `
-            <div class="cart-item">
-                <img src="${item.image}" alt="${item.name}">
-                <div class="cart-item-details">
-                    <div class="cart-item-title">${item.name}</div>
-                    <div class="cart-item-price">₹${item.price} x ${item.quantity}</div>
-                </div>
-                <div class="cart-item-remove" onclick="removeFromCart(${item.id})">
-                    <i class="fas fa-trash"></i>
-                </div>
-            </div>
-        `;
-    }).join('');
-    if (totalSpan) totalSpan.innerText = `₹${total.toFixed(2)}`;
 }
 
-// ========== CHECKOUT & PAYMENT ==========
+// ============ CHECKOUT & PAYMENT ==========
 let pendingAddress = null;
 let pendingDeliveryInfo = null;
+let currentCartItems = [];
 
-function proceedToCheckout() {
+async function proceedToCheckout() {
     if (!currentUser) {
         showNotification("Please login to checkout!", "error");
         toggleAuthModal();
         return;
     }
-    if (cart.length === 0) {
+
+    const data = await apiCall('/cart', 'GET');
+    currentCartItems = data.cart || [];
+
+    if (currentCartItems.length === 0) {
         showNotification("Your cart is empty!", "error");
         return;
     }
@@ -262,13 +328,13 @@ function proceedToCheckout() {
 }
 
 function updateOrderSummaryPreview() {
-    let total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    let total = currentCartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const summaryDiv = document.getElementById('orderSummaryPreview');
     if (summaryDiv) {
         summaryDiv.innerHTML = `
             <div style="background:#f0f0f0;padding:10px;border-radius:8px;">
                 <strong>Order Summary</strong><br>
-                ${cart.map(item => `${item.name} x${item.quantity}: ₹${(item.price * item.quantity).toFixed(2)}`).join('<br>')}
+                ${currentCartItems.map(item => `${item.name} x${item.quantity}: ₹${(item.price * item.quantity).toFixed(2)}`).join('<br>')}
                 <hr>
                 <strong>Total: ₹${total.toFixed(2)}</strong>
             </div>
@@ -288,7 +354,6 @@ function closePaymentModal() {
     if (modal) modal.classList.remove('show');
 }
 
-// Address form submit handler
 const addressForm = document.getElementById('addressForm');
 if (addressForm) {
     addressForm.addEventListener('submit', (e) => {
@@ -315,42 +380,38 @@ if (addressForm) {
     });
 }
 
-function placeOrder(paymentMethod, transactionId = null) {
-    const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    let orderStatus = 'Confirmed';
-    if (paymentMethod === 'cod') {
-        orderStatus = 'Processing';
-    }
-    const newOrder = {
-        id: "ORD" + Date.now(),
-        items: cart.map(item => ({ id: item.id, name: item.name, quantity: item.quantity, price: item.price })),
+async function placeOrder(paymentMethod, transactionId = null) {
+    const totalAmount = currentCartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    const orderData = {
+        items: currentCartItems.map(item => ({ id: item.id, name: item.name, quantity: item.quantity, price: item.price })),
         total: totalAmount,
-        address: pendingAddress,
-        status: orderStatus,
-        paymentMethod: paymentMethod,
-        transactionId: transactionId,
-        orderDate: new Date().toLocaleDateString(),
-        orderTime: new Date().toLocaleTimeString(),
-        deliveryInfo: pendingDeliveryInfo || calculateDeliveryDate()
+        address: pendingAddress
     };
-    orders.unshift(newOrder);
-    cart = [];
-    saveData();
-    loadCartItems();
-    loadOrders();
-    const deliveryMsg = `Estimated delivery: ${newOrder.deliveryInfo.range}`;
-    showNotification(`Order placed successfully! ${deliveryMsg}`);
-    pendingAddress = null;
-    pendingDeliveryInfo = null;
-    closePaymentModal();
-    showSection('orders');
+    
+    try {
+        const data = await apiCall('/orders/create', 'POST', orderData);
+        if (data.success) {
+            showNotification(`Order placed successfully! Estimated delivery: ${pendingDeliveryInfo.range}`);
+            await loadCartItems();
+            await loadOrders();
+            pendingAddress = null;
+            pendingDeliveryInfo = null;
+            closePaymentModal();
+            showSection('orders');
+        } else {
+            showNotification(data.message || "Order failed!", "error");
+        }
+    } catch (error) {
+        console.error('Place order error:', error);
+        showNotification("Error placing order!", "error");
+    }
 }
 
-// Payment buttons
 const payOnlineBtn = document.getElementById('payOnlineBtn');
 if (payOnlineBtn) {
     payOnlineBtn.onclick = () => {
-        const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const total = currentCartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         if (confirm(`Proceed to pay ₹${total} via Online Payment?\n(Click OK to simulate successful payment)`)) {
             const dummyTransaction = "TXN_" + Math.random().toString(36).substr(2, 8).toUpperCase();
             placeOrder('Online', dummyTransaction);
@@ -365,7 +426,7 @@ if (payCodBtn) {
     };
 }
 
-// ========== PRODUCTS & CATEGORIES FUNCTIONS ==========
+// ============ PRODUCTS & CATEGORIES FUNCTIONS ==========
 function loadProducts() {
     const grid = document.getElementById('productsGrid');
     if (!grid) return;
@@ -386,13 +447,7 @@ function loadProducts() {
 function filterProducts() {
     const searchTerm = document.getElementById('search-input').value.toLowerCase();
     
-    let productsToShow = [];
-    
-    if (searchTerm === '') {
-        productsToShow = products;
-    } else {
-        productsToShow = products.filter(p => p.name.toLowerCase().includes(searchTerm));
-    }
+    let productsToShow = searchTerm === '' ? products : products.filter(p => p.name.toLowerCase().includes(searchTerm));
     
     const grid = document.getElementById('productsGrid');
     if (!grid) return;
@@ -403,8 +458,7 @@ function filterProducts() {
         return;
     }
     
-    for (let i = 0; i < productsToShow.length; i++) {
-        const p = productsToShow[i];
+    productsToShow.forEach(p => {
         const card = document.createElement('div');
         card.className = 'product-card';
         card.innerHTML = `
@@ -417,21 +471,13 @@ function filterProducts() {
             </div>
         `;
         grid.appendChild(card);
-    }
+    });
 }
 
 function filterByCategory(category) {
-    console.log("Filtering by category:", category);  // Debugging
-    
-    // Filter products by category
     const filteredProducts = products.filter(p => p.category === category);
-    
     const productsGrid = document.getElementById('productsGrid');
-    if (!productsGrid) {
-        console.error("productsGrid not found!");
-        return;
-    }
-    
+    if (!productsGrid) return;
     productsGrid.innerHTML = '';
     
     if (filteredProducts.length === 0) {
@@ -439,8 +485,7 @@ function filterByCategory(category) {
         return;
     }
     
-    for (let i = 0; i < filteredProducts.length; i++) {
-        const p = filteredProducts[i];
+    filteredProducts.forEach(p => {
         const card = document.createElement('div');
         card.className = 'product-card';
         card.innerHTML = `
@@ -453,23 +498,17 @@ function filterByCategory(category) {
             </div>
         `;
         productsGrid.appendChild(card);
-    }
+    });
     
-    // Search box clear karo
     const searchInput = document.getElementById('search-input');
     if (searchInput) searchInput.value = '';
-    
-    // Products section dikhao
     showSection('products');
 }
 
 function loadCategories() {
     const categories = ['electronics', 'fashion', 'footwear', 'beauty', 'bags'];
     const grid = document.getElementById('categoryGrid');
-    if (!grid) {
-        console.error("categoryGrid element not found!");
-        return;
-    }
+    if (!grid) return;
     
     const categoryNames = {
         electronics: 'Electronics',
@@ -489,28 +528,14 @@ function loadCategories() {
     
     grid.innerHTML = '';
     
-    for (let i = 0; i < categories.length; i++) {
-        const cat = categories[i];
+    categories.forEach(cat => {
         const card = document.createElement('div');
         card.className = 'category-card';
         card.style.cursor = 'pointer';
-        card.innerHTML = `
-            <i class="fas ${getIconClass(cat)}" style="color: ${categoryColors[cat]}; font-size: 2.5rem;"></i>
-            <h3>${categoryNames[cat]}</h3>
-        `;
-        
-        // Important: onclick event set karo
-        card.onclick = (function(category) {
-            return function() {
-                console.log("Clicked category:", category);
-                filterByCategory(category);
-            };
-        })(cat);
-        
+        card.innerHTML = `<i class="fas ${getIconClass(cat)}" style="color: ${categoryColors[cat]}; font-size: 2.5rem;"></i><h3>${categoryNames[cat]}</h3>`;
+        card.onclick = () => filterByCategory(cat);
         grid.appendChild(card);
-    }
-    
-    console.log("Categories loaded:", categories.length);
+    });
 }
 
 function getIconClass(category) {
@@ -524,8 +549,8 @@ function getIconClass(category) {
     return icons[category];
 }
 
-// ========== ORDERS WITH DELIVERY DATE ==========
-function loadOrders() {
+// ============ ORDERS ==========
+async function loadOrders() {
     const container = document.getElementById('ordersContainer');
     if (!container) return;
     
@@ -533,58 +558,64 @@ function loadOrders() {
         container.innerHTML = '<p style="text-align:center;">Please login to view your orders</p>';
         return;
     }
-    if (orders.length === 0) {
-        container.innerHTML = '<p style="text-align:center;">No orders yet</p>';
-        return;
-    }
-    container.innerHTML = orders.map(order => {
-        let statusClass = 'processing';
-        if (order.status === 'Confirmed') statusClass = 'confirmed';
-        else if (order.status === 'Shipped') statusClass = 'shipped';
-        else if (order.status === 'Delivered') statusClass = 'delivered';
-        else statusClass = 'processing';
-        const deliveryInfo = order.deliveryInfo || calculateDeliveryDate();
-        return `
-            <div class="order-card">
-                <div class="order-header">
-                    <span class="order-id">${order.id}</span>
-                    <span class="order-status ${statusClass}">${order.status}</span>
-                </div>
-                <div class="order-items">
-                    <strong>Items:</strong>
-                    ${order.items.map(item => `
-                        <div class="order-item">
-                            <span>${item.name} x${item.quantity}</span>
-                            <span>₹${(item.price * item.quantity).toFixed(2)}</span>
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="order-address">
-                    <strong>Delivery Address:</strong><br>
-                    ${order.address.fullName}<br>
-                    ${order.address.line1}<br>
-                    ${order.address.city}, ${order.address.state} - ${order.address.pincode}<br>
-                    Mobile: ${order.address.mobile}
-                </div>
-                <div class="estimated-delivery">
-                    <i class="fas fa-truck"></i>
-                    <strong>Estimated Delivery:</strong> ${deliveryInfo.range}
-                    <div style="font-size: 0.8rem; margin-top: 0.3rem;">
-                        <i class="fas fa-calendar-alt"></i> Expected by ${deliveryInfo.exactDate}
+    
+    try {
+        const data = await apiCall('/orders', 'GET');
+        const orders = data.orders || [];
+        
+        if (orders.length === 0) {
+            container.innerHTML = '<p style="text-align:center;">No orders yet</p>';
+            return;
+        }
+        
+        container.innerHTML = orders.map(order => {
+            let statusClass = 'processing';
+            if (order.status === 'Confirmed') statusClass = 'confirmed';
+            else if (order.status === 'Shipped') statusClass = 'shipped';
+            else if (order.status === 'Delivered') statusClass = 'delivered';
+            
+            return `
+                <div class="order-card">
+                    <div class="order-header">
+                        <span class="order-id">${order.id}</span>
+                        <span class="order-status ${statusClass}">${order.status}</span>
+                    </div>
+                    <div class="order-items">
+                        <strong>Items:</strong>
+                        ${order.items.map(item => `
+                            <div class="order-item">
+                                <span>${item.name} x${item.quantity}</span>
+                                <span>₹${(item.price * item.quantity).toFixed(2)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="order-address">
+                        <strong>Delivery Address:</strong><br>
+                        ${order.address.fullName}<br>
+                        ${order.address.line1}<br>
+                        ${order.address.city}, ${order.address.state} - ${order.address.pincode}<br>
+                        Mobile: ${order.address.mobile}
+                    </div>
+                    <div class="estimated-delivery">
+                        <i class="fas fa-truck"></i>
+                        <strong>Estimated Delivery:</strong> ${order.estimatedDelivery}
+                    </div>
+                    <div class="order-total">
+                        Total: ₹${order.total.toFixed(2)}
+                    </div>
+                    <div style="margin-top: 0.5rem; color: #999; font-size: 0.8rem;">
+                        Ordered on: ${order.date} | Payment: ${order.paymentMethod || 'COD'}
                     </div>
                 </div>
-                <div class="order-total">
-                    Total: ₹${order.total.toFixed(2)}
-                </div>
-                <div style="margin-top: 0.5rem; color: #999; font-size: 0.8rem;">
-                    Ordered on: ${order.orderDate} at ${order.orderTime || ''} | Payment: ${order.paymentMethod}
-                </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Load orders error:', error);
+        container.innerHTML = '<p style="text-align:center;">Error loading orders</p>';
+    }
 }
 
-// ========== CONTACT FORM ==========
+// ============ CONTACT FORM ==========
 const contactForm = document.getElementById('contactForm');
 if (contactForm) {
     contactForm.addEventListener('submit', (e) => {
@@ -594,7 +625,7 @@ if (contactForm) {
     });
 }
 
-// ========== NAVIGATION ==========
+// ============ NAVIGATION ==========
 function showSection(sectionId) {
     document.querySelectorAll('.section').forEach(section => {
         section.classList.remove('active-section');
@@ -627,7 +658,7 @@ function toggleMenu() {
     }
 }
 
-// ========== NOTIFICATION ==========
+// ============ NOTIFICATION ==========
 function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
@@ -640,9 +671,10 @@ function showNotification(message, type = 'success') {
     }, 4000);
 }
 
-// ========== EVENT LISTENERS ==========
+// ============ EVENT LISTENERS ==========
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM loaded, initializing...");
+    console.log("API_URL:", API_URL);
     loadCategories();
     loadProducts();
     loadCartItems();
