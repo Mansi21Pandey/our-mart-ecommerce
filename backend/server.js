@@ -337,9 +337,8 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`\n Server running on port ${PORT}`);
     const BASE_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
-
-console.log(` API URL: ${BASE_URL}/api`);
-console.log(` Images URL: ${BASE_URL}/images/lenovo.jpeg`);
+    console.log(` API URL: ${BASE_URL}/api`);
+    console.log(` Images URL: ${BASE_URL}/images/lenovo.jpeg`);
     console.log(`\n Test User: test@example.com / 123456`);
     console.log(` Ready to accept requests!\n`);
 });
