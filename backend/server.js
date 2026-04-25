@@ -1,11 +1,10 @@
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
-const fs = require('fs');
 const path = require('path');
-
-dotenv.config();
-
+const fs = require('fs');
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
+require('dotenv').config();
 const app = express();
 
 // CORS configuration
@@ -118,11 +117,20 @@ function getUserFromToken(req) {
     const authHeader = req.headers.authorization;
     if (!authHeader) return null;
 
-    const token = authHeader.split(' ')[1];
+    // Handle both "Bearer token" and just "token" formats
+    const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+
     try {
+        // Handle the token format used in your frontend: "token_ userId_timestamp"
+        if (token.includes('token_')) {
+            const userId = parseInt(token.split('_')[1]);
+            return users.find(u => u.id === userId);
+        }
+        // Fallback for base64 encoded tokens
         const userId = parseInt(Buffer.from(token, 'base64').toString().split('-')[0]);
         return users.find(u => u.id === userId);
     } catch (e) {
+        console.log('Token parse error:', e.message);
         return null;
     }
 }
@@ -130,6 +138,110 @@ function getUserFromToken(req) {
 function generateToken(userId) {
     return Buffer.from(`${userId}-${Date.now()}`).toString('base64');
 }
+
+// ============ RAZORPAY ROUTES ============
+
+// Initialize Razorpay
+console.log('🔑 Initializing Razorpay...');
+console.log('KEY_ID exists?', !!process.env.RAZORPAY_KEY_ID);
+console.log('KEY_SECRET exists?', !!process.env.RAZORPAY_KEY_SECRET);
+
+const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+});
+
+// Create Razorpay Order
+app.post('/api/create-razorpay-order', async(req, res) => {
+    console.log('📦 Create Razorpay order request received');
+
+    const user = getUserFromToken(req);
+    if (!user) {
+        return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+
+    const { amount } = req.body;
+    console.log(`💰 Amount to charge: ₹${amount}`);
+
+    try {
+        const options = {
+            amount: Math.round(amount * 100),
+            currency: 'INR',
+            receipt: `receipt_${Date.now()}`,
+        };
+
+        const order = await razorpay.orders.create(options);
+        console.log(`✅ Order created: ${order.id}`);
+
+        res.json({
+            success: true,
+            order_id: order.id,
+            amount: order.amount,
+            currency: order.currency
+        });
+    } catch (error) {
+        console.error('❌ Razorpay error:', error.message);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to create order'
+        });
+    }
+});
+
+// Verify Razorpay Payment
+app.post('/api/verify-razorpay-payment', async(req, res) => {
+    console.log('🔐 Verifying Razorpay payment...');
+
+    const user = getUserFromToken(req);
+    if (!user) {
+        return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+
+    const { order_id, payment_id, signature, items, total, address } = req.body;
+
+    const body = order_id + "|" + payment_id;
+    const expectedSignature = crypto
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+        .update(body.toString())
+        .digest("hex");
+
+    if (expectedSignature !== signature) {
+        console.log('❌ Invalid signature');
+        return res.status(400).json({ success: false, message: 'Invalid payment signature' });
+    }
+
+    console.log('✅ Payment verified successfully');
+
+    const orderNumber = 'ORD' + Date.now();
+    const deliveryDate = new Date();
+    deliveryDate.setDate(deliveryDate.getDate() + 5);
+
+    const newOrder = {
+        id: orderNumber,
+        items: items,
+        total: total,
+        status: 'Confirmed',
+        paymentMethod: 'Razorpay',
+        paymentId: payment_id,
+        date: new Date().toLocaleDateString(),
+        userEmail: user.email,
+        userName: user.name,
+        address: address,
+        estimatedDelivery: deliveryDate.toLocaleDateString()
+    };
+
+    orders.push(newOrder);
+
+    if (carts[user.id]) {
+        carts[user.id] = [];
+    }
+
+    res.json({
+        success: true,
+        message: 'Payment verified and order placed successfully',
+        order: newOrder
+    });
+});
 
 // ============ AUTH ROUTES ============
 app.post('/api/auth/signup', (req, res) => {

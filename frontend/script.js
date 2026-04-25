@@ -1,11 +1,13 @@
 // ============ API CONFIGURATION - WORKS EVERYWHERE ============
 // Automatically detects if running locally or on Render
 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ?
-    'http://localhost:5000/api' // Local development
+    'http://localhost:5000/api' // ← Your local backend port
     :
     '/api'; // Render deployment
 
 console.log('API_URL:', API_URL); // This will help debug
+// ============ RAZORPAY CONFIGURATION ============
+const RAZORPAY_KEY_ID = 'rzp_test_Shfk0TlKjvRTtI';
 
 // ============ PRODUCT DATA ============
 const products = [
@@ -411,11 +413,7 @@ async function placeOrder(paymentMethod, transactionId = null) {
 const payOnlineBtn = document.getElementById('payOnlineBtn');
 if (payOnlineBtn) {
     payOnlineBtn.onclick = () => {
-        const total = currentCartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        if (confirm(`Proceed to pay ₹${total} via Online Payment?\n(Click OK to simulate successful payment)`)) {
-            const dummyTransaction = "TXN_" + Math.random().toString(36).substr(2, 8).toUpperCase();
-            placeOrder('Online', dummyTransaction);
-        }
+        initiateRazorpayPayment();
     };
 }
 
@@ -669,6 +667,106 @@ function showNotification(message, type = 'success') {
         notification.classList.remove('show');
         setTimeout(() => notification.remove(), 300);
     }, 4000);
+}
+
+// ============ RAZORPAY PAYMENT FUNCTION ============
+async function initiateRazorpayPayment() {
+    console.log("🔵 initiateRazorpayPayment CALLED");
+    
+    const totalAmount = currentCartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    console.log("🔵 Total amount:", totalAmount);
+    
+    if (totalAmount <= 0) {
+        showNotification("Cart is empty!", "error");
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        
+        const response = await fetch(`${API_URL}/create-razorpay-order`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ amount: totalAmount })
+        });
+        
+        const orderData = await response.json();
+        
+        if (!orderData.success) {
+            showNotification("Failed to create order", "error");
+            return;
+        }
+        
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => {
+            const options = {
+                key: RAZORPAY_KEY_ID,
+                amount: orderData.amount,
+                currency: orderData.currency,
+                order_id: orderData.order_id,
+                name: "Our Mart",
+                description: "Payment for your order",
+                handler: async function(response) {
+                    const verifyResponse = await fetch(`${API_URL}/verify-razorpay-payment`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            order_id: response.razorpay_order_id,
+                            payment_id: response.razorpay_payment_id,
+                            signature: response.razorpay_signature,
+                            items: currentCartItems.map(item => ({ 
+                                id: item.id, 
+                                name: item.name, 
+                                quantity: item.quantity, 
+                                price: item.price 
+                            })),
+                            total: totalAmount,
+                            address: pendingAddress
+                        })
+                    });
+                    
+                    const result = await verifyResponse.json();
+                    
+                    if (result.success) {
+                        showNotification("Payment successful! Order placed.");
+                        await loadCartItems();
+                        await loadOrders();
+                        pendingAddress = null;
+                        closePaymentModal();
+                        showSection('orders');
+                    } else {
+                        showNotification("Payment verification failed!", "error");
+                    }
+                },
+                prefill: {
+                    name: currentUser?.name || "",
+                    email: currentUser?.email || "",
+                    contact: pendingAddress?.mobile || ""
+                },
+                theme: {
+                    color: "#007bff"
+                }
+            };
+            
+            const razorpay = new window.Razorpay(options);
+            razorpay.open();
+        };
+        script.onerror = () => {
+            showNotification("Failed to load payment gateway", "error");
+        };
+        document.body.appendChild(script);
+        
+    } catch (error) {
+        console.error('Razorpay error:', error);
+        showNotification("Payment failed! Please try again.", "error");
+    }
 }
 
 // ============ EVENT LISTENERS ==========
