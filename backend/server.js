@@ -1,21 +1,23 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
-const Razorpay = require('razorpay');
-const crypto = require('crypto');
-require('dotenv').config();
+const express = require("express");
+const cors = require("cors");
+const path = require("path");
+const fs = require("fs");
+const Razorpay = require("razorpay");
+const crypto = require("crypto");
+require("dotenv").config();
 const app = express();
 
 // CORS configuration
-app.use(cors({
-    origin: true,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
-}));
+app.use(
+    cors({
+        origin: true,
+        credentials: true,
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+    }),
+);
 
-app.options('*', cors());
+app.options("*", cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -24,7 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // ✅ This looks in the parent folder (your-project/frontend/)
 // Serve frontend files from the parent folder
-const frontendPath = path.join(__dirname, '..', 'frontend');
+const frontendPath = path.join(__dirname, "..", "frontend");
 if (fs.existsSync(frontendPath)) {
     app.use(express.static(frontendPath));
     console.log(`✅ Frontend files served from: ${frontendPath}`);
@@ -35,9 +37,9 @@ if (fs.existsSync(frontendPath)) {
 // ============ IMAGE SERVING ============
 // Change from looking in current directory to looking in parent directory
 const imageLocations = [
-    path.join(__dirname, '..', 'images'), // Parent/images
-    path.join(__dirname, '..', 'frontend/images'), // Parent/frontend/images
-    path.join(__dirname, 'images') // Backend/images (if any)
+    path.join(__dirname, "..", "images"), // Parent/images
+    path.join(__dirname, "..", "frontend/images"), // Parent/frontend/images
+    path.join(__dirname, "images"), // Backend/images (if any)
 ];
 
 let activeImagePath = null;
@@ -49,17 +51,17 @@ for (const location of imageLocations) {
 }
 
 if (activeImagePath) {
-    app.use('/images', express.static(activeImagePath));
+    app.use("/images", express.static(activeImagePath));
     console.log(`✅ Images served from: ${activeImagePath}`);
 } else {
     // Create images folder
-    activeImagePath = path.join(__dirname, 'images');
+    activeImagePath = path.join(__dirname, "images");
     if (!fs.existsSync(activeImagePath)) {
         fs.mkdirSync(activeImagePath, { recursive: true });
     }
-    app.use('/images', express.static(activeImagePath));
+    app.use("/images", express.static(activeImagePath));
     console.log(`📁 Created and serving images from: ${activeImagePath}`);
-    console.log('⚠️  Note: Add your .jpeg files to this folder!');
+    console.log("⚠️  Note: Add your .jpeg files to this folder!");
 }
 
 // ============ IN-MEMORY STORAGE ============
@@ -74,42 +76,234 @@ users.push({
     name: "Test User",
     email: "test@example.com",
     password: "123456",
-    created_at: new Date()
+    created_at: new Date(),
 });
 
 // ============ PRODUCT DATA ============
-const products = [
-    { id: 1, name: "Lenovo Laptop", price: 86990, category: "electronics", image: "/images/lenovo.jpeg", rating: 4.8 },
-    { id: 2, name: "HP Laptop", price: 75490, category: "electronics", image: "/images/hp.jpeg", rating: 4.5 },
-    { id: 3, name: "Asus Vivobook", price: 39956, category: "electronics", image: "/images/asus.jpeg", rating: 4.1 },
-    { id: 4, name: "Sony Headphones", price: 3989, category: "electronics", image: "/images/headphone.jpeg", rating: 4.7 },
-    { id: 5, name: "Sony Bravia TV", price: 919000, category: "electronics", image: "/images/tv.jpeg", rating: 3.9 },
-    { id: 6, name: "Atomberg Fan", price: 3599, category: "electronics", image: "/images/fan.jpeg", rating: 4.2 },
-    { id: 7, name: "Voltas AC", price: 46500, category: "electronics", image: "/images/ac.jpeg", rating: 4.5 },
-    { id: 8, name: "Platform Heels", price: 4000, category: "footwear", image: "/images/platform.jpeg", rating: 3.6 },
-    { id: 9, name: "Pencil Heels", price: 3000, category: "footwear", image: "/images/pencil.jpeg", rating: 4.6 },
-    { id: 10, name: "Boot Heels", price: 7000, category: "footwear", image: "/images/boot.jpeg", rating: 3.8 },
-    { id: 11, name: "Sneakers", price: 5000, category: "footwear", image: "/images/sneakers.jpeg", rating: 4.2 },
-    { id: 12, name: "Shoes", price: 4000, category: "footwear", image: "/images/shoes.jpeg", rating: 4.9 },
-    { id: 13, name: "Slippers", price: 4000, category: "footwear", image: "/images/slippers.jpeg", rating: 4.1 },
-    { id: 14, name: "Shirt", price: 800, category: "fashion", image: "/images/shirt.jpeg", rating: 3.2 },
-    { id: 15, name: "T-Shirt", price: 200, category: "fashion", image: "/images/tshirt.jpeg", rating: 4.0 },
-    { id: 16, name: "Wedding Wear", price: 5689, category: "fashion", image: "/images/weeding.jpeg", rating: 4.7 },
-    { id: 17, name: "Kurti", price: 400, category: "fashion", image: "/images/kurti.jpeg", rating: 4.3 },
-    { id: 18, name: "Anarkali Suit", price: 963, category: "fashion", image: "/images/anarkali.jpeg", rating: 4.6 },
-    { id: 19, name: "Saree", price: 700, category: "fashion", image: "/images/saree.jpeg", rating: 4.4 },
-    { id: 20, name: "Jumpsuit", price: 1500, category: "fashion", image: "/images/jumpsuit.jpeg", rating: 3.6 },
-    { id: 21, name: "Cap", price: 1500, category: "fashion", image: "/images/cap.jpeg", rating: 3.8 },
-    { id: 22, name: "Mixer Grinder", price: 4000, category: "home", image: "/images/mixer.jpeg", rating: 4.6 },
-    { id: 23, name: "Hawking Cookers", price: 3500, category: "home", image: "/images/cooker.jpeg", rating: 4.8 },
-    { id: 24, name: "Cutlery", price: 4800, category: "home", image: "/images/cutlery.jpeg", rating: 4.0 },
-    { id: 25, name: "Mama's Earth Cream", price: 500, category: "beauty", image: "/images/mcream.jpeg", rating: 4.8 },
-    { id: 26, name: "Face Wash", price: 300, category: "beauty", image: "/images/facewash.jpeg", rating: 4.5 },
-    { id: 27, name: "Shampoo", price: 800, category: "beauty", image: "/images/shampoo.jpeg", rating: 4.3 },
-    { id: 28, name: "Eye Shadow", price: 500, category: "beauty", image: "/images/eye.jpeg", rating: 4.0 },
-    { id: 29, name: "School Bag", price: 2000, category: "bags", image: "/images/school.jpeg", rating: 4.0 },
-    { id: 30, name: "Purse", price: 2000, category: "bags", image: "/images/purse.jpeg", rating: 4.8 },
-    { id: 31, name: "Wallet", price: 1000, category: "bags", image: "/images/wallet.jpeg", rating: 4.0 }
+const products = [{
+        id: 1,
+        name: "Lenovo Laptop",
+        price: 86990,
+        category: "electronics",
+        image: "/images/lenovo.jpeg",
+        rating: 4.8,
+    },
+    {
+        id: 2,
+        name: "HP Laptop",
+        price: 75490,
+        category: "electronics",
+        image: "/images/hp.jpeg",
+        rating: 4.5,
+    },
+    {
+        id: 3,
+        name: "Asus Vivobook",
+        price: 39956,
+        category: "electronics",
+        image: "/images/asus.jpeg",
+        rating: 4.1,
+    },
+    {
+        id: 4,
+        name: "Sony Headphones",
+        price: 3989,
+        category: "electronics",
+        image: "/images/headphone.jpeg",
+        rating: 4.7,
+    },
+    {
+        id: 5,
+        name: "Sony Bravia TV",
+        price: 919000,
+        category: "electronics",
+        image: "/images/tv.jpeg",
+        rating: 3.9,
+    },
+    {
+        id: 6,
+        name: "Atomberg Fan",
+        price: 3599,
+        category: "electronics",
+        image: "/images/fan.jpeg",
+        rating: 4.2,
+    },
+    {
+        id: 7,
+        name: "Voltas AC",
+        price: 46500,
+        category: "electronics",
+        image: "/images/ac.jpeg",
+        rating: 4.5,
+    },
+    {
+        id: 8,
+        name: "Platform Heels",
+        price: 4000,
+        category: "footwear",
+        image: "/images/platform.jpeg",
+        rating: 3.6,
+    },
+    {
+        id: 9,
+        name: "Pencil Heels",
+        price: 3000,
+        category: "footwear",
+        image: "/images/pencil.jpeg",
+        rating: 4.6,
+    },
+    {
+        id: 10,
+        name: "Boot Heels",
+        price: 7000,
+        category: "footwear",
+        image: "/images/boot.jpeg",
+        rating: 3.8,
+    },
+    {
+        id: 11,
+        name: "Sneakers",
+        price: 5000,
+        category: "footwear",
+        image: "/images/sneakers.jpeg",
+        rating: 4.2,
+    },
+    {
+        id: 12,
+        name: "Shoes",
+        price: 4000,
+        category: "footwear",
+        image: "/images/shoes.jpeg",
+        rating: 4.9,
+    },
+    {
+        id: 13,
+        name: "Slippers",
+        price: 4000,
+        category: "footwear",
+        image: "/images/slippers.jpeg",
+        rating: 4.1,
+    },
+    {
+        id: 14,
+        name: "Shirt",
+        price: 800,
+        category: "fashion",
+        image: "/images/shirt.jpeg",
+        rating: 3.2,
+    },
+    {
+        id: 15,
+        name: "T-Shirt",
+        price: 200,
+        category: "fashion",
+        image: "/images/tshirt.jpeg",
+        rating: 4.0,
+    },
+    {
+        id: 16,
+        name: "Wedding Wear",
+        price: 5689,
+        category: "fashion",
+        image: "/images/weeding.jpeg",
+        rating: 4.7,
+    },
+    {
+        id: 17,
+        name: "Kurti",
+        price: 400,
+        category: "fashion",
+        image: "/images/kurti.jpeg",
+        rating: 4.3,
+    },
+    {
+        id: 18,
+        name: "Anarkali Suit",
+        price: 963,
+        category: "fashion",
+        image: "/images/anarkali.jpeg",
+        rating: 4.6,
+    },
+    {
+        id: 19,
+        name: "Saree",
+        price: 700,
+        category: "fashion",
+        image: "/images/saree.jpeg",
+        rating: 4.4,
+    },
+    {
+        id: 20,
+        name: "Jumpsuit",
+        price: 1500,
+        category: "fashion",
+        image: "/images/jumpsuit.jpeg",
+        rating: 3.6,
+    },
+    {
+        id: 21,
+        name: "Cap",
+        price: 1500,
+        category: "fashion",
+        image: "/images/cap.jpeg",
+        rating: 3.8,
+    },
+    {
+        id: 22,
+        name: "Face Cream",
+        price: 500,
+        category: "beauty",
+        image: "/images/mcream.jpeg",
+        rating: 4.8,
+    },
+    {
+        id: 23,
+        name: "Face Wash",
+        price: 300,
+        category: "beauty",
+        image: "/images/facewash.jpeg",
+        rating: 4.5,
+    },
+    {
+        id: 24,
+        name: "Shampoo",
+        price: 800,
+        category: "beauty",
+        image: "/images/shampoo.jpeg",
+        rating: 4.3,
+    },
+    {
+        id: 25,
+        name: "Eye Shadow",
+        price: 500,
+        category: "beauty",
+        image: "/images/eye.jpeg",
+        rating: 4.0,
+    },
+    {
+        id: 26,
+        name: "School Bag",
+        price: 2000,
+        category: "bags",
+        image: "/images/school.jpeg",
+        rating: 4.0,
+    },
+    {
+        id: 27,
+        name: "Purse",
+        price: 2000,
+        category: "bags",
+        image: "/images/purse.jpeg",
+        rating: 4.8,
+    },
+    {
+        id: 28,
+        name: "Wallet",
+        price: 1000,
+        category: "bags",
+        image: "/images/wallet.jpeg",
+        rating: 4.0,
+    },
 ];
 
 // ============ HELPER FUNCTIONS ============
@@ -118,46 +312,52 @@ function getUserFromToken(req) {
     if (!authHeader) return null;
 
     // Handle both "Bearer token" and just "token" formats
-    const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+    const token = authHeader.startsWith("Bearer ") ?
+        authHeader.split(" ")[1] :
+        authHeader;
 
     try {
         // Handle the token format used in your frontend: "token_ userId_timestamp"
-        if (token.includes('token_')) {
-            const userId = parseInt(token.split('_')[1]);
-            return users.find(u => u.id === userId);
+        if (token.includes("token_")) {
+            const userId = parseInt(token.split("_")[1]);
+            return users.find((u) => u.id === userId);
         }
         // Fallback for base64 encoded tokens
-        const userId = parseInt(Buffer.from(token, 'base64').toString().split('-')[0]);
-        return users.find(u => u.id === userId);
+        const userId = parseInt(
+            Buffer.from(token, "base64").toString().split("-")[0],
+        );
+        return users.find((u) => u.id === userId);
     } catch (e) {
-        console.log('Token parse error:', e.message);
+        console.log("Token parse error:", e.message);
         return null;
     }
 }
 
 function generateToken(userId) {
-    return Buffer.from(`${userId}-${Date.now()}`).toString('base64');
+    return Buffer.from(`${userId}-${Date.now()}`).toString("base64");
 }
 
 // ============ RAZORPAY ROUTES ============
 
 // Initialize Razorpay
-console.log('🔑 Initializing Razorpay...');
-console.log('KEY_ID exists?', !!process.env.RAZORPAY_KEY_ID);
-console.log('KEY_SECRET exists?', !!process.env.RAZORPAY_KEY_SECRET);
+console.log("🔑 Initializing Razorpay...");
+console.log("KEY_ID exists?", !!process.env.RAZORPAY_KEY_ID);
+console.log("KEY_SECRET exists?", !!process.env.RAZORPAY_KEY_SECRET);
 
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
 // Create Razorpay Order
-app.post('/api/create-razorpay-order', async(req, res) => {
-    console.log('📦 Create Razorpay order request received');
+app.post("/api/create-razorpay-order", async(req, res) => {
+    console.log("📦 Create Razorpay order request received");
 
     const user = getUserFromToken(req);
     if (!user) {
-        return res.status(401).json({ success: false, message: 'Not authenticated' });
+        return res
+            .status(401)
+            .json({ success: false, message: "Not authenticated" });
     }
 
     const { amount } = req.body;
@@ -166,7 +366,7 @@ app.post('/api/create-razorpay-order', async(req, res) => {
     try {
         const options = {
             amount: Math.round(amount * 100),
-            currency: 'INR',
+            currency: "INR",
             receipt: `receipt_${Date.now()}`,
         };
 
@@ -177,24 +377,26 @@ app.post('/api/create-razorpay-order', async(req, res) => {
             success: true,
             order_id: order.id,
             amount: order.amount,
-            currency: order.currency
+            currency: order.currency,
         });
     } catch (error) {
-        console.error('❌ Razorpay error:', error.message);
+        console.error("❌ Razorpay error:", error.message);
         res.status(500).json({
             success: false,
-            message: error.message || 'Failed to create order'
+            message: error.message || "Failed to create order",
         });
     }
 });
 
 // Verify Razorpay Payment
-app.post('/api/verify-razorpay-payment', async(req, res) => {
-    console.log('🔐 Verifying Razorpay payment...');
+app.post("/api/verify-razorpay-payment", async(req, res) => {
+    console.log("🔐 Verifying Razorpay payment...");
 
     const user = getUserFromToken(req);
     if (!user) {
-        return res.status(401).json({ success: false, message: 'Not authenticated' });
+        return res
+            .status(401)
+            .json({ success: false, message: "Not authenticated" });
     }
 
     const { order_id, payment_id, signature, items, total, address } = req.body;
@@ -206,13 +408,15 @@ app.post('/api/verify-razorpay-payment', async(req, res) => {
         .digest("hex");
 
     if (expectedSignature !== signature) {
-        console.log('❌ Invalid signature');
-        return res.status(400).json({ success: false, message: 'Invalid payment signature' });
+        console.log("❌ Invalid signature");
+        return res
+            .status(400)
+            .json({ success: false, message: "Invalid payment signature" });
     }
 
-    console.log('✅ Payment verified successfully');
+    console.log("✅ Payment verified successfully");
 
-    const orderNumber = 'ORD' + Date.now();
+    const orderNumber = "ORD" + Date.now();
     const deliveryDate = new Date();
     deliveryDate.setDate(deliveryDate.getDate() + 5);
 
@@ -220,14 +424,14 @@ app.post('/api/verify-razorpay-payment', async(req, res) => {
         id: orderNumber,
         items: items,
         total: total,
-        status: 'Confirmed',
-        paymentMethod: 'Razorpay',
+        status: "Confirmed",
+        paymentMethod: "Razorpay",
         paymentId: payment_id,
         date: new Date().toLocaleDateString(),
         userEmail: user.email,
         userName: user.name,
         address: address,
-        estimatedDelivery: deliveryDate.toLocaleDateString()
+        estimatedDelivery: deliveryDate.toLocaleDateString(),
     };
 
     orders.push(newOrder);
@@ -238,48 +442,62 @@ app.post('/api/verify-razorpay-payment', async(req, res) => {
 
     res.json({
         success: true,
-        message: 'Payment verified and order placed successfully',
-        order: newOrder
+        message: "Payment verified and order placed successfully",
+        order: newOrder,
     });
 });
 
 // ============ AUTH ROUTES ============
-app.post('/api/auth/signup', (req, res) => {
-    console.log('Signup request:', req.body.email);
+app.post("/api/auth/signup", (req, res) => {
+    console.log("Signup request:", req.body.email);
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
-        return res.status(400).json({ success: false, message: 'All fields are required' });
+        return res
+            .status(400)
+            .json({ success: false, message: "All fields are required" });
     }
 
-    const existingUser = users.find(u => u.email === email);
+    const existingUser = users.find((u) => u.email === email);
     if (existingUser) {
-        return res.status(400).json({ success: false, message: 'Email already registered' });
+        return res
+            .status(400)
+            .json({ success: false, message: "Email already registered" });
     }
 
-    const newUser = { id: nextUserId++, name, email, password, created_at: new Date() };
+    const newUser = {
+        id: nextUserId++,
+        name,
+        email,
+        password,
+        created_at: new Date(),
+    };
     users.push(newUser);
     const token = generateToken(newUser.id);
 
     res.status(201).json({
         success: true,
         token,
-        user: { id: newUser.id, name: newUser.name, email: newUser.email }
+        user: { id: newUser.id, name: newUser.name, email: newUser.email },
     });
 });
 
-app.post('/api/auth/login', (req, res) => {
-    console.log('Login request:', req.body.email);
+app.post("/api/auth/login", (req, res) => {
+    console.log("Login request:", req.body.email);
     const { email, password } = req.body;
 
     if (!email || !password) {
-        return res.status(400).json({ success: false, message: 'Email and password required' });
+        return res
+            .status(400)
+            .json({ success: false, message: "Email and password required" });
     }
 
-    const user = users.find(u => u.email === email && u.password === password);
+    const user = users.find((u) => u.email === email && u.password === password);
 
     if (!user) {
-        return res.status(401).json({ success: false, message: 'Invalid email or password' });
+        return res
+            .status(401)
+            .json({ success: false, message: "Invalid email or password" });
     }
 
     const token = generateToken(user.id);
@@ -287,68 +505,144 @@ app.post('/api/auth/login', (req, res) => {
     res.json({
         success: true,
         token,
-        user: { id: user.id, name: user.name, email: user.email }
+        user: { id: user.id, name: user.name, email: user.email },
     });
 });
 
 // ============ PRODUCTS ROUTE ============
-app.get('/api/products', (req, res) => {
+app.get("/api/products", (req, res) => {
     res.json({ success: true, products });
 });
 
+/* ============ AI PRODUCT RECOMMENDATIONS ============ */
+
+app.get("/api/products/:id/recommendations", async(req, res) => {
+    try {
+        const productId = Number(req.params.id);
+
+        // Check whether the selected product exists
+        const selectedProduct = products.find(
+            (product) => product.id === productId,
+        );
+
+        if (!selectedProduct) {
+            return res.status(404).json({
+                success: false,
+                message: "Product not found",
+            });
+        }
+
+        // Send product data to the Python AI service
+        const aiResponse = await fetch("http://127.0.0.1:5001/recommend", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                product_id: productId,
+                products: products.map((product) => ({
+                    ...product,
+                    description: product.description || "",
+                })),
+            }),
+            signal: AbortSignal.timeout(10000),
+        });
+
+        if (!aiResponse.ok) {
+            throw new Error(`AI service returned ${aiResponse.status}`);
+        }
+
+        const aiData = await aiResponse.json();
+
+        if (!aiData.success) {
+            throw new Error("AI recommendation failed");
+        }
+
+        res.json({
+            success: true,
+            product: selectedProduct,
+            recommendations: aiData.recommendations,
+        });
+    } catch (error) {
+        console.error("AI recommendation error:", error.message);
+
+        res.status(502).json({
+            success: false,
+            message: "AI recommendation service is unavailable",
+        });
+    }
+});
+
 // ============ CART ROUTES ============
-app.get('/api/cart', (req, res) => {
+app.get("/api/cart", (req, res) => {
     const user = getUserFromToken(req);
-    if (!user) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    if (!user)
+        return res
+            .status(401)
+            .json({ success: false, message: "Not authenticated" });
 
     res.json({ success: true, cart: carts[user.id] || [] });
 });
 
-app.post('/api/cart/add', (req, res) => {
+app.post("/api/cart/add", (req, res) => {
     const user = getUserFromToken(req);
-    if (!user) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    if (!user)
+        return res
+            .status(401)
+            .json({ success: false, message: "Not authenticated" });
 
     const { productId, quantity = 1 } = req.body;
-    const product = products.find(p => p.id === productId);
+    const product = products.find((p) => p.id === productId);
 
-    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+    if (!product)
+        return res
+            .status(404)
+            .json({ success: false, message: "Product not found" });
 
     if (!carts[user.id]) carts[user.id] = [];
 
-    const existingItem = carts[user.id].find(item => item.id === productId);
+    const existingItem = carts[user.id].find((item) => item.id === productId);
     if (existingItem) {
         existingItem.quantity += quantity;
     } else {
         carts[user.id].push({...product, quantity });
     }
 
-    res.json({ success: true, message: 'Item added to cart' });
+    res.json({ success: true, message: "Item added to cart" });
 });
 
-app.delete('/api/cart/:productId', (req, res) => {
+app.delete("/api/cart/:productId", (req, res) => {
     const user = getUserFromToken(req);
-    if (!user) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    if (!user)
+        return res
+            .status(401)
+            .json({ success: false, message: "Not authenticated" });
 
     const productId = parseInt(req.params.productId);
     if (carts[user.id]) {
-        carts[user.id] = carts[user.id].filter(item => item.id !== productId);
+        carts[user.id] = carts[user.id].filter((item) => item.id !== productId);
     }
 
-    res.json({ success: true, message: 'Item removed from cart' });
+    res.json({ success: true, message: "Item removed from cart" });
 });
 
 // ============ ORDER ROUTES ============
-app.post('/api/orders/create', (req, res) => {
+app.post("/api/orders/create", (req, res) => {
     const user = getUserFromToken(req);
-    if (!user) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    if (!user)
+        return res
+            .status(401)
+            .json({ success: false, message: "Not authenticated" });
 
     const { items, total, address } = req.body;
 
     if (!items || items.length === 0) {
-        return res.status(400).json({ success: false, message: 'No items in order' });
+        return res
+            .status(400)
+            .json({ success: false, message: "No items in order" });
     }
 
-    const orderNumber = 'ORD' + Date.now();
+    const orderNumber = "ORD" + Date.now();
     const deliveryDate = new Date();
     deliveryDate.setDate(deliveryDate.getDate() + 5);
 
@@ -356,43 +650,52 @@ app.post('/api/orders/create', (req, res) => {
         id: orderNumber,
         items,
         total,
-        status: 'Processing',
+        status: "Processing",
         date: new Date().toLocaleDateString(),
         userEmail: user.email,
         userName: user.name,
         address,
-        estimatedDelivery: deliveryDate.toLocaleDateString()
+        estimatedDelivery: deliveryDate.toLocaleDateString(),
     };
 
     orders.push(newOrder);
     carts[user.id] = []; // Clear cart
 
-    res.json({ success: true, message: 'Order placed successfully', order: newOrder });
+    res.json({
+        success: true,
+        message: "Order placed successfully",
+        order: newOrder,
+    });
 });
 
-app.get('/api/orders', (req, res) => {
+app.get("/api/orders", (req, res) => {
     const user = getUserFromToken(req);
-    if (!user) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    if (!user)
+        return res
+            .status(401)
+            .json({ success: false, message: "Not authenticated" });
 
-    const userOrders = orders.filter(o => o.userEmail === user.email);
+    const userOrders = orders.filter((o) => o.userEmail === user.email);
     res.json({ success: true, orders: userOrders });
 });
 
 // ============ CONTACT ROUTE ============
-app.post('/api/contact/submit', (req, res) => {
-    console.log('Contact message:', req.body);
-    res.json({ success: true, message: 'Message sent successfully' });
+app.post("/api/contact/submit", (req, res) => {
+    console.log("Contact message:", req.body);
+    res.json({ success: true, message: "Message sent successfully" });
 });
 
 // ============ DEFAULT ROUTE (FIXED) ============
 // This single route serves your main website HTML file
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
     // Check if frontend exists and serve it
-    const indexPath = path.join(__dirname, '..', 'frontend', 'index.html');
+    const indexPath = path.join(__dirname, "..", "frontend", "index.html");
     if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
     } else {
-        res.json({ message: 'E-commerce API is running! Visit /api/products for products' });
+        res.json({
+            message: "E-commerce API is running! Visit /api/products for products",
+        });
     }
 });
 
@@ -401,7 +704,9 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`\n🚀 Server running on port ${PORT}`);
     console.log(`📦 API URL: https://our-mart-ecommerce-5.onrender.com/api`);
-    console.log(`🖼️  Images URL: https://our-mart-ecommerce-5.onrender.com/images/lenovo.jpeg`);
+    console.log(
+        `🖼️  Images URL: https://our-mart-ecommerce-5.onrender.com/images/lenovo.jpeg`,
+    );
     console.log(`\n✅ Test User: test@example.com / 123456`);
     console.log(`✨ Ready to accept requests!\n`);
 });
