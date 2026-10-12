@@ -1,3 +1,4 @@
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://127.0.0.1:5001";
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -533,7 +534,7 @@ app.get("/api/products/:id/recommendations", async(req, res) => {
         }
 
         // Send product data to the Python AI service
-        const aiResponse = await fetch("http://127.0.0.1:5001/recommend", {
+        const aiResponse = await fetch(`${AI_SERVICE_URL}/recommend`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
